@@ -1,0 +1,748 @@
+// 🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡
+// NEVER MAKE CHANGES TO THIS FILE (THIS IS JUST A COPY OF THE ORIGINAL FILE IN THE WEB APP)
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mongodb"
+    url      = env("DATABASE_URL")
+}
+
+model Team {
+    id                                String           @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                         DateTime         @default(now())
+    updatedAt                         DateTime         @updatedAt
+    name                              String
+    iconUrl                           String?
+    slug                              String           @unique
+    isLtd                             Boolean          @default(false)
+    masterOpenAiApiKey                String?
+    masterOpenRouterApiKey            String?
+    masterSerpApiKey                  String?
+    coreSubscriptionId                String?
+    storageTopupSubscriptionId        String?
+    chatbotSubscriptionId             String?
+    chatbotMessageTopupSubscriptionId String?
+    customDomainSubscriptionId        String?
+    TeamMember                        TeamMember[]
+    Thread                            Thread[]
+    Note                              Note[]
+    Agent                             Agent[]
+    IntSource                         IntSource[]
+    TreeNode                          TreeNode[]
+    Chatbot                           Chatbot[]
+    Creation                          Creation[]
+    CustomDomain                      CustomDomain[]
+    Workflow                          Workflow[]
+    WorkflowRun                       WorkflowRun[]
+    TeamInvitation                    TeamInvitation[]
+    ApiAction                         ApiAction[]
+    ApiTrigger                        ApiTrigger[]
+    Style                             Style[]
+    Prompt                            Prompt[]
+    Credential                        Credential[]
+    Reward                            Reward[]
+}
+
+model TeamMember {
+    id        String         @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+    userId    String
+    role      TeamMemberRole
+    teamId    String         @db.ObjectId
+    Team      Team           @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+    @@unique([userId, teamId])
+}
+
+model TeamInvitation {
+    id        String         @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+    teamId    String         @db.ObjectId
+    Team      Team           @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    email     String
+    role      TeamMemberRole
+}
+
+enum TeamMemberRole {
+    OWNER
+    MEMBER
+}
+
+model PaidUser {
+    id                                String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                         DateTime @default(now())
+    updatedAt                         DateTime @updatedAt
+    userId                            String   @unique
+    licenseKey                        String?
+    coreLicenseKey                    String?
+    coreSubscriptionId                String?
+    storageTopupSubscriptionId        String?
+    chatbotSubscriptionId             String?
+    chatbotMessageTopupSubscriptionId String?
+    customDomainSubscriptionId        String?
+    vipLicenseKey                     String?
+}
+
+model Credential {
+    id        String         @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+    teamId    String?        @db.ObjectId
+    Team      Team?          @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId    String
+    type      CredentialType
+    value     String
+}
+
+enum CredentialType {
+    // LLM API KEYS
+    OPENAI_API_KEY
+    ANTHROPIC_API_KEY
+    OPENROUTER_API_KEY
+    GOOGLE_GENAI_API_KEY
+    GROQ_API_KEY
+    MISTRAL_API_KEY
+    AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY
+    // INTEGRATION ACCESS TOKENS
+    GOOGLE_DRIVE_ACCESS_TOKEN
+    GOOGLE_DRIVE_REFRESH_TOKEN
+    AIRTABLE_ACCESS_TOKEN
+    NOTION_ACCESS_TOKEN
+    DROPBOX_ACCESS_TOKEN
+    DROPBOX_REFRESH_TOKEN
+    // OTHER
+    TELEGRAM_USER_ID
+    // MINDPAL
+    MINDPAL_API_KEY
+}
+
+model Thread {
+    id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime  @updatedAt
+    teamId             String?   @db.ObjectId
+    Team               Team?     @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId             String
+    isPublic           Boolean   @default(false)
+    title              String
+    category           String[]  @default([])
+    agentId            String?   @db.ObjectId
+    agent              Agent?    @relation(fields: [agentId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+    intSourceDocIdList String?
+    extSourceEnumList  String?
+    smartNoteIdList    String?
+    Message            Message[]
+    Note               Note?
+}
+
+model Note {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    teamId    String?  @db.ObjectId
+    Team      Team?    @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId    String
+    threadId  String   @unique @db.ObjectId
+    thread    Thread   @relation(fields: [threadId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    json      String
+}
+
+enum ExtSource {
+    WIKIPEDIA
+    ARXIV
+    YOUTUBE
+    GOOGLE_SCHOLAR
+    SEMANTIC_SCHOLAR
+    GOOGLE
+    WOLFRAM_ALPHA
+    REDDIT
+    TWITTER
+}
+
+model Message {
+    threadId         String        @db.ObjectId
+    Thread           Thread        @relation(fields: [threadId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    id               String        @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt        DateTime      @default(now())
+    updatedAt        DateTime      @updatedAt
+    role             MessageRole
+    name             String?
+    content          String
+    imgUrlList       String[]      @default([])
+    referenceList    String?
+    clarificationSet String?
+    agentId          String?       @db.ObjectId
+    Agent            Agent?        @relation(fields: [agentId], references: [id], onUpdate: Cascade, onDelete: SetNull)
+    llmModel         LLMModel?
+    feedbackType     FeedbackType?
+    feedbackComment  String?
+}
+
+enum MessageRole {
+    ASSISTANT
+    USER
+    SYSTEM
+    FUNCTION
+}
+
+model Agent {
+    id                        String              @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                 DateTime            @default(now())
+    updatedAt                 DateTime            @updatedAt
+    teamId                    String?             @db.ObjectId
+    Team                      Team?               @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId                    String
+    title                     String
+    category                  String[]            @default([])
+    desc                      String?
+    copywritingContent        String?
+    instruction               String
+    showReferences            Boolean             @default(true)
+    isMarkdown                Boolean             @default(true)
+    isLaTeX                   Boolean             @default(false)
+    language                  String?
+    tone                      String?
+    style                     String?
+    format                    String?
+    model                     LLMModel            @default(GPT_4O_MINI)
+    maxTokens                 Int                 @default(2000)
+    temperature               Float               @default(0.3)
+    isLongTermMemoryEnabled   Boolean             @default(false)
+    defaultIntSourceDocIdList String?
+    defaultExtSourceEnumList  String?
+    defaultSmartNoteIdList    String?
+    trainingMsgList           String?
+    isPublic                  Boolean             @default(false)
+    tools                     String[]            @default([])
+    Thread                    Thread[]
+    ChatBot                   Chatbot[]
+    WorkflowNode              WorkflowNode[]
+    ApiActionOnAgent          ApiActionOnAgent[]
+    ApiTriggerOnAgent         ApiTriggerOnAgent[]
+    StyleOnAgent              StyleOnAgent[]
+    Message                   Message[]
+}
+
+model ApiActionOnAgent {
+    id          String    @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    agentId     String    @db.ObjectId
+    Agent       Agent     @relation(fields: [agentId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    apiActionId String    @db.ObjectId
+    ApiAction   ApiAction @relation(fields: [apiActionId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+    @@unique([agentId, apiActionId])
+}
+
+model ApiAction {
+    id                 String             @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt          DateTime           @default(now())
+    updatedAt          DateTime           @updatedAt
+    teamId             String?            @db.ObjectId
+    Team               Team?              @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId             String
+    name               String
+    desc               String
+    url                String
+    method             String
+    headers            Json[]
+    body               Json[]
+    queryParams        Json[]
+    isApprovalRequired Boolean
+    isPublic           Boolean            @default(false)
+    ApiActionOnAgent   ApiActionOnAgent[]
+}
+
+model ApiTriggerOnAgent {
+    id           String     @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt    DateTime   @default(now())
+    updatedAt    DateTime   @updatedAt
+    agentId      String     @db.ObjectId
+    Agent        Agent      @relation(fields: [agentId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    apiTriggerId String     @db.ObjectId
+    ApiTrigger   ApiTrigger @relation(fields: [apiTriggerId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+    @@unique([agentId, apiTriggerId])
+}
+
+model ApiTrigger {
+    id                String              @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt         DateTime            @default(now())
+    updatedAt         DateTime            @updatedAt
+    teamId            String?             @db.ObjectId
+    Team              Team?               @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId            String
+    url               String
+    method            String
+    ApiTriggerOnAgent ApiTriggerOnAgent[]
+}
+
+model StyleOnAgent {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    agentId   String   @db.ObjectId
+    Agent     Agent    @relation(fields: [agentId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    styleId   String   @db.ObjectId
+    Style     Style    @relation(fields: [styleId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+    @@unique([agentId, styleId])
+}
+
+model Style {
+    id           String         @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
+    teamId       String?        @db.ObjectId
+    Team         Team?          @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId       String
+    title        String         @default("New style")
+    desc         String
+    StyleOnAgent StyleOnAgent[]
+}
+
+enum LLMModel {
+    // OPENAI PROVIDER
+    GPT_4O_MINI
+    GPT_4_VISION_PREVIEW
+    GPT_4
+    GPT_4_TURBO
+    GPT_4_32K
+    GPT_35_TURBO
+    GPT_35_TURBO_16K
+    // ANTHROPIC
+    CLAUDE_3_HAIKU_20240307
+    CLAUDE_3_SONNET_20240229
+    CLAUDE_35_SONNET
+    CLAUDE_3_OPUS_20240229
+    // GOOGLE PROVIDER
+    GOOGLE_GEMINI_PRO
+    GOOGLE_GEMINI_FLASH
+    // GROQ
+    GROQ_LLAMA_3_8B
+    GROQ_LLAMA_3_70B
+    GROQ_LLAMA_31_405B
+    // AWS BEDROCK
+    AWS_BEDROCK_META_LLAMA_3_8B
+    AWS_BEDROCK_META_LLAMA_3_70B
+    AWS_BEDROCK_MISTRAL_8X7B
+    AWS_BEDROCK_MISTRAL_LARGE
+    // OPENROUTER PROVIDER
+    OPENROUTER_MISTRALAI_MISTRAL_7B_INSTRUCT
+    OPENROUTER_MISTRALAI_MIXTRAL_8X7B_INSTRUCT
+    OPENROUTER_MISTRALAI_MISTRAL_TINY
+    OPENROUTER_MISTRALAI_MISTRAL_SMALL
+    OPENROUTER_MISTRALAI_MISTRAL_MEDIUM
+    OPENROUTER_MISTRALAI_MISTRAL_LARGE
+    OPENROUTER_OPENAI_GPT_35_TURBO
+    OPENROUTER_OPENAI_GPT_35_TURBO_16K
+    OPENROUTER_OPENAI_GPT_4
+    OPENROUTER_OPENAI_GPT_4_32K
+    OPENROUTER_OPENAI_GPT_4_1106_PREVIEW
+    OPENROUTER_OPENAI_GPT_35_TURBO_INSTRUCT
+    OPENROUTER_GOOGLE_PALM_2_CHAT_BISON
+    OPENROUTER_GOOGLE_PALM_2_CODECHAT_BISON
+    OPENROUTER_META_LLAMA_LLAMA_2_13B_CHAT
+    OPENROUTER_META_LLAMA_LLAMA_2_70B_CHAT
+    OPENROUTER_NOUSRESEARCH_NOUS_HERMES_LLAMA2_13B
+    OPENROUTER_META_LLAMA_CODELLAMA_34B_INSTRUCT
+    OPENROUTER_PHIND_PHIND_CODELLAMA_34B
+    OPENROUTER_JONDURBIN_AIROBOROS_L2_70B
+    OPENROUTER_MIGTISSERA_SYNTHIA_70B
+    OPENROUTER_PYGMALIONAI_MYTHALION_13B
+    OPENROUTER_UNDI95_REMM_SLERP_L2_13B
+    OPENROUTER_GRYPHE_MYTHOMAX_L2_13B
+    OPENROUTER_XWIN_LM_XWIN_LM_70B
+    OPENROUTER_ANTHROPIC_CLAUDE_3_OPUS
+    OPENROUTER_ANTHROPIC_CLAUDE_3_SONNET
+    OPENROUTER_ANTHROPIC_CLAUDE_21
+    OPENROUTER_ANTHROPIC_CLAUDE_20
+    OPENROUTER_ANTHROPIC_CLAUDE_INSTANT_V1
+    OPENROUTER_MANCER_WEAVER
+}
+
+model IntSource {
+    id         String        @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt  DateTime      @default(now())
+    updatedAt  DateTime      @updatedAt
+    teamId     String?       @db.ObjectId
+    Team       Team?         @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId     String
+    documentId String
+    size       Float         @default(0)
+    title      String
+    type       IntSourceType
+    docS3Path  String?
+    url        String?
+    TreeNode   TreeNode      @relation(fields: [treeNodeId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    treeNodeId String        @unique @db.ObjectId
+}
+
+enum IntSourceType {
+    DOCUMENT
+    URL
+    GOOGLE_DRIVE
+    ONEDRIVE
+    DROPBOX
+    NOTION
+    AIRTABLE
+}
+
+model TreeNode {
+    id                String     @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt         DateTime   @default(now())
+    updatedAt         DateTime   @updatedAt
+    teamId            String?    @db.ObjectId
+    Team              Team?      @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId            String
+    treeNodeIndex     Int
+    treeNodeParent    Int
+    treeNodeText      String
+    treeNodeDroppable Boolean
+    IntSource         IntSource?
+}
+
+model Chatbot {
+    id                        String                @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                 DateTime              @default(now())
+    updatedAt                 DateTime              @updatedAt
+    // OWNERSHIP
+    teamId                    String?               @db.ObjectId
+    Team                      Team?                 @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    authorId                  String
+    authorName                String
+    authorAvatarUrl           String?
+    // GENERAL INFO
+    name                      String
+    avatarUrl                 String?
+    category                  String[]              @default([])
+    desc                      String?
+    // FUNCTIONAL
+    agentId                   String                @db.ObjectId
+    agent                     Agent                 @relation(fields: [agentId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    intSourceDocIdList        String?
+    extSourceEnumList         String?
+    smartNoteIdList           String?
+    // USER INFO COLLECTION
+    collectUserInfo           Boolean               @default(false)
+    userInfoForm              String?
+    // CHAT INTERFACE
+    isMpBrandingOff           Boolean               @default(false)
+    theme                     Theme                 @default(MINDPAL_LIGHT)
+    initialMessage            String
+    chatSendText              String                @default("Send")
+    infoSendText              String                @default("Submit")
+    chatPlaceholder           String                @default("Ask anything...")
+    suggestedMessageList      String[]              @default([])
+    // ACCESS & SECURITY
+    isPublished               Boolean               @default(false)
+    slug                      String?               @unique
+    customDomain              String?
+    isEmbedRestricted         Boolean               @default(false)
+    embedRestrictedDomainList String[]              @default([])
+    // API KEYS
+    openAiApiKey              String?
+    openRouterApiKey          String?
+    serpApiKey                String?
+    ChatbotConversation       ChatbotConversation[]
+    // WHATSAPP 
+    whatsappAccessToken       String?
+    whatsappPhoneNumberId     String?
+}
+
+model ChatbotConversation {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime @default(now())
+    chatbotId String   @db.ObjectId
+    Chatbot   Chatbot  @relation(fields: [chatbotId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    history   String // JSON
+    userInfo  String? // JSON
+    llmModel  LLMModel @default(GPT_4O_MINI)
+}
+
+model TemplateAgent {
+    id           String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    title        String
+    categoryList String[] @default([])
+    instruction  String
+}
+
+model Creation {
+    id           String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    teamId       String?  @db.ObjectId
+    Team         Team?    @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId       String
+    isPublic     Boolean  @default(false)
+    title        String
+    category     String[] @default([])
+    prompt       String?
+    markdown     String?
+    html         String?
+    json         String?
+    aiQueryCount Int      @default(0)
+}
+
+model CustomDomain {
+    id             String                     @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt      DateTime                   @default(now())
+    updatedAt      DateTime                   @updatedAt
+    userId         String
+    teamId         String?                    @db.ObjectId
+    Team           Team?                      @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    name           String                     @unique
+    assignmentType CustomDomainAssignmentType @default(CHATBOT)
+}
+
+enum CustomDomainAssignmentType {
+    CHATBOT
+    WORKFLOW
+}
+
+model Workflow {
+    id                                String                   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                         DateTime                 @default(now())
+    updatedAt                         DateTime                 @updatedAt
+    teamId                            String?                  @db.ObjectId
+    Team                              Team?                    @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId                            String
+    title                             String                   @default("Untitled workflow")
+    category                          String[]                 @default([])
+    slug                              String?
+    customDomain                      String?
+    isEmbedRestricted                 Boolean                  @default(false)
+    embedRestrictedDomainList         String[]                 @default([])
+    isPublic                          Boolean                  @default(false)
+    isForSale                         Boolean                  @default(false)
+    isLlmApiKeyInputRequiredBeforeRun Boolean                  @default(false)
+    isMpBrandingOff                   Boolean                  @default(false)
+    theme                             Theme                    @default(MINDPAL_LIGHT)
+    lmsqueezyCheckoutUrl              String?
+    openAiApiKey                      String?
+    openRouterApiKey                  String?
+    serpApiKey                        String?
+    desc                              String?
+    copywritingContent                String?
+    videoDemoUrl                      String?
+    WorkflowTriggerInput              WorkflowTriggerInput[]
+    WorkflowNode                      WorkflowNode[]
+    WorkflowRun                       WorkflowRun[]
+    WorkflowPostRunWebhook            WorkflowPostRunWebhook[]
+}
+
+enum Theme {
+    MINDPAL_LIGHT
+    MINDPAL_DARK
+    ZINC_LIGHT
+    ZINC_DARK
+    RED_LIGHT
+    RED_DARK
+    ORANGE_LIGHT
+    ORANGE_DARK
+    PINK_LIGHT
+    PINK_DARK
+    AMBER_LIGHT
+    AMBER_DARK
+    LIME_LIGHT
+    LIME_DARK
+    GREEN_LIGHT
+    GREEN_DARK
+    TEAL_LIGHT
+    TEAL_DARK
+    CYAN_LIGHT
+    CYAN_DARK
+    BLUE_LIGHT
+    BLUE_DARK
+}
+
+model WorkflowTriggerInput {
+    id                      String                    @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt               DateTime                  @default(now())
+    updatedAt               DateTime                  @updatedAt
+    workflowId              String                    @db.ObjectId
+    Workflow                Workflow                  @relation(fields: [workflowId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    index                   Int
+    name                    String
+    type                    WorkflowTriggerInputType
+    isRequired              Boolean                   @default(true)
+    WorkflowRunTriggerInput WorkflowRunTriggerInput[]
+
+    @@unique([workflowId, name])
+}
+
+enum WorkflowTriggerInputType {
+    TEXT
+    LONG_TEXT
+    FILE
+    URL
+    IMAGES
+}
+
+model WorkflowPostRunWebhook {
+    id                       String                     @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                DateTime                   @default(now())
+    updatedAt                DateTime                   @updatedAt
+    workflowId               String                     @db.ObjectId
+    Workflow                 Workflow                   @relation(fields: [workflowId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    url                      String
+    WorkflowRunWebhookResult WorkflowRunWebhookResult[]
+
+    @@unique([workflowId, url])
+}
+
+model WorkflowNode {
+    id                    String                  @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt             DateTime                @default(now())
+    updatedAt             DateTime                @updatedAt
+    workflowId            String                  @db.ObjectId
+    Workflow              Workflow                @relation(fields: [workflowId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    agentId               String                  @db.ObjectId
+    Agent                 Agent                   @relation(fields: [agentId], references: [id])
+    index                 Int
+    title                 String
+    prompt                String                  @default("Provide a high-quality response")
+    triggerInputIdList    String[]
+    inputNodeIdList       String[]
+    WorkflowRunResultItem WorkflowRunResultItem[]
+
+    @@unique([workflowId, title])
+}
+
+model WorkflowRun {
+    id                       String                     @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                DateTime                   @default(now())
+    updatedAt                DateTime                   @updatedAt
+    teamId                   String?                    @db.ObjectId
+    Team                     Team?                      @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId                   String
+    workflowId               String                     @db.ObjectId
+    Workflow                 Workflow                   @relation(fields: [workflowId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    title                    String                     @default("Untitled workflow run")
+    isRunInBackgroundEnabled Boolean                    @default(false)
+    isSuperviseModeEnabled   Boolean                    @default(false)
+    isForSale                Boolean                    @default(false)
+    isPublic                 Boolean                    @default(false)
+    status                   WorkflowRunStatus          @default(IN_PROGRESS)
+    lmsqueezyOrderId         String?
+    customerEmail            String?
+    WorkflowRunTriggerInput  WorkflowRunTriggerInput[]
+    WorkflowRunResultItem    WorkflowRunResultItem[]
+    WorkflowRunWebhookResult WorkflowRunWebhookResult[]
+    WorkflowRunCredential    WorkflowRunCredential[]
+}
+
+enum WorkflowRunStatus {
+    IN_PROGRESS
+    FAILED
+    SUCCESSFUL
+}
+
+model WorkflowRunTriggerInput {
+    id                     String               @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt              DateTime             @default(now())
+    updatedAt              DateTime             @updatedAt
+    workflowRunId          String               @db.ObjectId
+    WorkflowRun            WorkflowRun          @relation(fields: [workflowRunId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    workflowTriggerInputId String               @db.ObjectId
+    WorkflowTriggerInput   WorkflowTriggerInput @relation(fields: [workflowTriggerInputId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    value                  String
+}
+
+model WorkflowRunResultItem {
+    id              String        @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+    workflowRunId   String        @db.ObjectId
+    WorkflowRun     WorkflowRun   @relation(fields: [workflowRunId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    workflowNodeId  String        @db.ObjectId
+    WorkflowNode    WorkflowNode  @relation(fields: [workflowNodeId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    role            MessageRole   @default(ASSISTANT)
+    name            String?
+    content         String?
+    referenceList   Json[]
+    llmModel        LLMModel      @default(GPT_4O_MINI)
+    feedbackType    FeedbackType?
+    feedbackComment String?
+}
+
+model WorkflowRunWebhookResult {
+    id                       String                   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt                DateTime                 @default(now())
+    updatedAt                DateTime                 @updatedAt
+    workflowRunId            String                   @db.ObjectId
+    WorkflowRun              WorkflowRun              @relation(fields: [workflowRunId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    workflowPostRunWebhookId String                   @db.ObjectId
+    WorkflowPostRunWebhook   WorkflowPostRunWebhook   @relation(fields: [workflowPostRunWebhookId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    status                   WorkflowRunWebhookStatus @default(PENDING)
+
+    @@unique([workflowRunId, workflowPostRunWebhookId])
+}
+
+enum WorkflowRunWebhookStatus {
+    PENDING
+    SUCCESSFUL
+    FAILED
+}
+
+model WorkflowRunCredential {
+    id            String         @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    workflowRunId String         @db.ObjectId
+    WorkflowRun   WorkflowRun    @relation(fields: [workflowRunId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    type          CredentialType
+    value         String
+
+    @@unique([workflowRunId, type])
+}
+
+model TemplateWorkflow {
+    id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt            DateTime @default(now())
+    updatedAt            DateTime @updatedAt
+    title                String
+    categoryList         String[]
+    WorkflowTriggerInput Json[]
+    WorkflowNode         Json[]
+}
+
+model Prompt {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    teamId    String?  @db.ObjectId
+    Team      Team?    @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId    String
+    content   String
+}
+
+enum FeedbackType {
+    GOOD
+    BAD
+}
+
+model Reward {
+    id        String     @id @default(auto()) @map("_id") @db.ObjectId
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+    teamId    String?    @db.ObjectId
+    Team      Team?      @relation(fields: [teamId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+    userId    String
+    type      RewardType
+    value     Int
+}
+
+enum RewardType {
+    CUSTOM_DOMAIN
+    STORAGE
+}
